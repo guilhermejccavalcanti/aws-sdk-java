@@ -15,13 +15,12 @@
 package com.amazonaws;
 
 import java.net.InetAddress;
-
 import org.apache.http.annotation.NotThreadSafe;
-
 import com.amazonaws.http.IdleConnectionReaper;
 import com.amazonaws.retry.PredefinedRetryPolicies;
 import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.util.VersionInfoUtils;
+
 /**
  * Client configuration options such as proxy settings, user agent string, max
  * retry attempts, etc.
@@ -221,6 +220,11 @@ public class ClientConfiguration {
     private int responseMetadataCacheSize = DEFAULT_RESPONSE_METADATA_CACHE_SIZE;
 
     /**
+     * The DNS Resolver to resolve ip addresses of amazon web services
+     */
+    private DnsResolver dnsResolver = new SystemDefaultDnsResolver();
+
+    /**
      * Can be used to specify custom specific Apache HTTP client configurations.
      */
     private final ApacheHttpClientConfig apacheHttpClientConfig;
@@ -230,29 +234,29 @@ public class ClientConfiguration {
     }
 
     public ClientConfiguration(ClientConfiguration other) {
-        this.connectionTimeout           = other.connectionTimeout;
-        this.maxConnections              = other.maxConnections;
-        this.maxErrorRetry               = other.maxErrorRetry;
-        this.retryPolicy                 = other.retryPolicy;
-        this.localAddress                = other.localAddress;
-        this.protocol                    = other.protocol;
-        this.proxyDomain                 = other.proxyDomain;
-        this.proxyHost                   = other.proxyHost;
-        this.proxyPassword               = other.proxyPassword;
-        this.proxyPort                   = other.proxyPort;
-        this.proxyUsername               = other.proxyUsername;
-        this.proxyWorkstation            = other.proxyWorkstation;
-        this.preemptiveBasicProxyAuth    = other.preemptiveBasicProxyAuth;
-        this.socketTimeout               = other.socketTimeout;
-        this.userAgent                   = other.userAgent;
-        this.useReaper                   = other.useReaper;
-        this.useGzip                     = other.useGzip;
+        this.connectionTimeout = other.connectionTimeout;
+        this.maxConnections = other.maxConnections;
+        this.maxErrorRetry = other.maxErrorRetry;
+        this.retryPolicy = other.retryPolicy;
+        this.localAddress = other.localAddress;
+        this.protocol = other.protocol;
+        this.proxyDomain = other.proxyDomain;
+        this.proxyHost = other.proxyHost;
+        this.proxyPassword = other.proxyPassword;
+        this.proxyPort = other.proxyPort;
+        this.proxyUsername = other.proxyUsername;
+        this.proxyWorkstation = other.proxyWorkstation;
+        this.preemptiveBasicProxyAuth = other.preemptiveBasicProxyAuth;
+        this.socketTimeout = other.socketTimeout;
+        this.userAgent = other.userAgent;
+        this.useReaper = other.useReaper;
+        this.useGzip = other.useGzip;
         this.socketReceiveBufferSizeHint = other.socketReceiveBufferSizeHint;
-        this.socketSendBufferSizeHint    = other.socketSendBufferSizeHint;
-        this.signerOverride              = other.signerOverride;
-        this.responseMetadataCacheSize   = other.responseMetadataCacheSize;
-        this.apacheHttpClientConfig =
-            new ApacheHttpClientConfig(other.apacheHttpClientConfig);
+        this.socketSendBufferSizeHint = other.socketSendBufferSizeHint;
+        this.signerOverride = other.signerOverride;
+        this.responseMetadataCacheSize = other.responseMetadataCacheSize;
+        this.dnsResolver = other.dnsResolver;
+        this.apacheHttpClientConfig = new ApacheHttpClientConfig(other.apacheHttpClientConfig);
     }
 
     /**
@@ -408,8 +412,8 @@ public class ClientConfiguration {
      * @return The updated ClientConfiguration object.
      */
     public ClientConfiguration withLocalAddress(InetAddress localAddress) {
-      setLocalAddress(localAddress);
-      return this;
+        setLocalAddress(localAddress);
+        return this;
     }
 
     /**
@@ -896,7 +900,7 @@ public class ClientConfiguration {
      *         hint and then the TCP receive buffer size hint.
      */
     public int[] getSocketBufferSizeHints() {
-        return new int[] {socketSendBufferSizeHint, socketReceiveBufferSizeHint};
+        return new int[] { socketSendBufferSizeHint, socketReceiveBufferSizeHint };
     }
 
     /**
@@ -934,8 +938,7 @@ public class ClientConfiguration {
      * @param socketReceiveBufferSizeHint
      *            The size hint (in bytes) for the low level TCP receive buffer.
      */
-    public void setSocketBufferSizeHints(
-            int socketSendBufferSizeHint, int socketReceiveBufferSizeHint) {
+    public void setSocketBufferSizeHints(int socketSendBufferSizeHint, int socketReceiveBufferSizeHint) {
         this.socketSendBufferSizeHint = socketSendBufferSizeHint;
         this.socketReceiveBufferSizeHint = socketReceiveBufferSizeHint;
     }
@@ -980,8 +983,7 @@ public class ClientConfiguration {
      *
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withSocketBufferSizeHints(
-            int socketSendBufferSizeHint, int socketReceiveBufferSizeHint) {
+    public ClientConfiguration withSocketBufferSizeHints(int socketSendBufferSizeHint, int socketReceiveBufferSizeHint) {
         setSocketBufferSizeHints(socketSendBufferSizeHint, socketReceiveBufferSizeHint);
         return this;
     }
@@ -1095,7 +1097,6 @@ public class ClientConfiguration {
     public void setPreemptiveBasicProxyAuth(Boolean preemptiveBasicProxyAuth) {
         this.preemptiveBasicProxyAuth = preemptiveBasicProxyAuth;
     }
-
 
     /**
      * Sets whether to attempt to authenticate preemptively against proxy
@@ -1239,9 +1240,7 @@ public class ClientConfiguration {
      *            milliseconds
      * @return the updated ClientConfiguration object
      */
-    public ClientConfiguration withConnectionMaxIdleMillis(
-            long connectionMaxIdleMillis) {
-
+    public ClientConfiguration withConnectionMaxIdleMillis(long connectionMaxIdleMillis) {
         setConnectionMaxIdleMillis(connectionMaxIdleMillis);
         return this;
     }
@@ -1266,6 +1265,32 @@ public class ClientConfiguration {
      */
     public ClientConfiguration withTcpKeepAlive(final boolean use) {
         setUseTcpKeepAlive(use);
+        return this;
+    }
+
+    /**
+     * Returns the DnsResolver that is used by the client for resolving AWS ip addresses
+     *
+     */
+    public DnsResolver getDnsResolver() {
+        return dnsResolver;
+    }
+
+    /**
+     * Sets the DNS Resolver that should be used to for resolving AWS ip addresses
+     */
+    public void setDnsResolver(final DnsResolver resolver) {
+        if (resolver != null) {
+            this.dnsResolver = resolver;
+        }
+    }
+
+    /**
+     * Sets the DNS Resolver that should be used to for resolving AWS ip addresses
+     * @return The updated ClientConfiguration object.
+     */
+    public ClientConfiguration withDnsResolver(final DnsResolver resolver) {
+        setDnsResolver(resolver);
         return this;
     }
 
